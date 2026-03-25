@@ -1,39 +1,104 @@
-# Budget Planner
+# Budget Planner with Firebase Authentication
 
-A simple budget planner web app built with Next.js, TypeScript, and localStorage.
+A budget planner web app built with Next.js, TypeScript, Tailwind CSS, and Firebase Authentication.
 
 ## Features
 
+- Firebase Authentication (email/password)
+- Protected dashboard route
 - Enter monthly salary
-- Default categories: Rent, Food, Transport, Savings
+- Default categories with emoji icons
 - Add/edit/delete categories
-- Adjust budget using percentage sliders or amount inputs
+- Adjust budget using percentage or amount inputs
 - Real-time calculations
 - Total validation (warns if exceeds 100%)
 - Data persists in localStorage
 - Responsive design
+- Russian language UI
 
 ## Getting Started
 
-1. Install dependencies:
+### 1. Install dependencies
+
 ```bash
 npm install
 ```
 
-2. Run the development server:
+### 2. Set up Firebase
+
+1. Go to [Firebase Console](https://console.firebase.google.com/)
+2. Create a new project
+3. Enable Authentication → Email/Password
+4. Get your Firebase config from Project Settings
+
+### 3. Configure environment variables
+
+Create a `.env.local` file in the root directory:
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key_here
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+```
+
+### 4. Run the development server
+
 ```bash
 npm run dev
 ```
 
-3. Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000)
+
+## Project Structure
+
+```
+budget-planner/
+├── app/
+│   ├── components/
+│   │   ├── SalaryInput.tsx
+│   │   ├── CategoryList.tsx
+│   │   ├── CategoryItem.tsx
+│   │   ├── Summary.tsx
+│   │   └── AddCategoryButton.tsx
+│   ├── login/
+│   │   └── page.tsx
+│   ├── register/
+│   │   └── page.tsx
+│   ├── dashboard/
+│   │   └── page.tsx
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── globals.css
+│   └── types.ts
+├── hooks/
+│   └── useAuth.ts
+├── lib/
+│   └── firebase.ts
+├── package.json
+├── tsconfig.json
+└── tailwind.config.ts
+```
 
 ## How It Works
 
+### Authentication Flow
+
+1. User visits home page → redirected to `/login`
+2. User can register at `/register` or login at `/login`
+3. After successful auth → redirected to `/dashboard`
+4. Dashboard is protected - only accessible when logged in
+5. User can logout from dashboard
+
+### Budget Management
+
 - Enter your monthly salary
-- Use sliders to adjust percentage per category
+- Use percentage inputs to adjust budget per category
 - Or enter amounts directly
 - Percentages and amounts sync automatically
-- All data saves to localStorage
+- All data saves to localStorage (per user)
 - Refresh the page - your data persists!
 
 ## Tech Stack
@@ -41,5 +106,12 @@ npm run dev
 - Next.js 14 (App Router)
 - React 18
 - TypeScript
-- CSS3
+- Tailwind CSS
+- Firebase Authentication
 - localStorage
+
+## Security Notes
+
+- Never commit `.env.local` to version control
+- Firebase config is safe to expose in client-side code
+- Use Firebase Security Rules for database protection (when added)
