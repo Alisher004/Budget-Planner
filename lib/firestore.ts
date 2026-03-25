@@ -1,5 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
-import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, query, getDocs, where, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, query, getDocs, where, serverTimestamp, Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -10,11 +10,17 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-export const db = getFirestore(app);
+// Initialize Firebase only on client side
+let db: Firestore;
+
+if (typeof window !== 'undefined') {
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  db = getFirestore(app);
+}
 
 // User functions
 export async function getUserData(userId: string) {
+  if (!db) return null;
   const userDoc = await getDoc(doc(db, 'users', userId));
   if (userDoc.exists()) {
     return userDoc.data();
@@ -23,6 +29,7 @@ export async function getUserData(userId: string) {
 }
 
 export async function createUser(userId: string, email: string) {
+  if (!db) return;
   await setDoc(doc(db, 'users', userId), {
     email,
     isPremium: false,
@@ -31,6 +38,7 @@ export async function createUser(userId: string, email: string) {
 }
 
 export async function updateUserPremiumStatus(userId: string, isPremium: boolean) {
+  if (!db) return;
   await updateDoc(doc(db, 'users', userId), {
     isPremium,
     updatedAt: serverTimestamp(),
@@ -39,6 +47,7 @@ export async function updateUserPremiumStatus(userId: string, isPremium: boolean
 
 // Payment request functions
 export async function createPaymentRequest(userId: string, userEmail: string) {
+  if (!db) return '';
   const paymentRef = doc(collection(db, 'payments'));
   await setDoc(paymentRef, {
     userId,
@@ -50,6 +59,7 @@ export async function createPaymentRequest(userId: string, userEmail: string) {
 }
 
 export async function getAllPaymentRequests() {
+  if (!db) return [];
   const paymentsQuery = query(collection(db, 'payments'));
   const snapshot = await getDocs(paymentsQuery);
   return snapshot.docs.map(doc => ({
@@ -59,6 +69,7 @@ export async function getAllPaymentRequests() {
 }
 
 export async function updatePaymentStatus(paymentId: string, status: 'approved' | 'rejected') {
+  if (!db) return;
   await updateDoc(doc(db, 'payments', paymentId), {
     status,
     updatedAt: serverTimestamp(),
@@ -66,6 +77,7 @@ export async function updatePaymentStatus(paymentId: string, status: 'approved' 
 }
 
 export async function getUserPaymentRequests(userId: string) {
+  if (!db) return [];
   const paymentsQuery = query(
     collection(db, 'payments'),
     where('userId', '==', userId)
@@ -76,3 +88,5 @@ export async function getUserPaymentRequests(userId: string) {
     ...doc.data(),
   }));
 }
+
+export { db };
