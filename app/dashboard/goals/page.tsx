@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { usePremium } from '@/hooks/usePremium';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
@@ -16,6 +17,7 @@ interface Goal {
 
 export default function GoalsPage() {
   const { user, loading } = useAuth();
+  const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
   const [salary, setSalary] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -62,7 +64,7 @@ export default function GoalsPage() {
     }
   }, [salary, categories]);
 
-  if (loading || !user) {
+  if (loading || loadingPremium || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Загрузка...</div>
@@ -96,9 +98,14 @@ export default function GoalsPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar userEmail={user.email} />
+      <Sidebar 
+        userEmail={user.email}
+        isPremium={isPremium}
+        isTrialActive={isTrialActive}
+        trialDaysLeft={trialDaysLeft}
+      />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Финансовые цели</h1>

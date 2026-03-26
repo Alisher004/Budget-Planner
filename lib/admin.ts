@@ -1,10 +1,7 @@
-// Define admin emails here
-const ADMIN_EMAILS = [
-  'admin@example.com', // Replace with your actual admin email
-  // Add more admin emails as needed
-];
+// Define admin email here
+const ADMIN_EMAIL = 'alma@gmail.com';
 
 export function isAdmin(email: string | null): boolean {
   if (!email) return false;
-  return ADMIN_EMAILS.includes(email.toLowerCase());
+  return email.toLowerCase() === ADMIN_EMAIL.toLowerCase();
 }

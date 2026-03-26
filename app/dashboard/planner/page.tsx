@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { usePremium } from '@/hooks/usePremium';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
@@ -19,6 +20,7 @@ const DEFAULT_CATEGORIES: Category[] = [
 
 export default function PlannerPage() {
   const { user, loading } = useAuth();
+  const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
   const [salary, setSalary] = useState(0);
   const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
@@ -96,7 +98,7 @@ export default function PlannerPage() {
     setCategories([...categories, newCategory]);
   };
 
-  if (loading || !user) {
+  if (loading || loadingPremium || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Загрузка...</div>
@@ -111,9 +113,14 @@ export default function PlannerPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar userEmail={user.email} />
+      <Sidebar 
+        userEmail={user.email} 
+        isPremium={isPremium}
+        isTrialActive={isTrialActive}
+        trialDaysLeft={trialDaysLeft}
+      />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Планировщик бюджета</h1>
 

@@ -1,19 +1,28 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { usePremium } from '@/hooks/usePremium';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
 import { DailyExpense } from '../../types';
+import { collection, addDoc, query, where, getDocs, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firestore';
+import { useToast } from '@/hooks/useToast';
+import Toast from '../../components/Toast';
 
 export default function DailyPage() {
   const { user, loading } = useAuth();
+  const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
   const [expenses, setExpenses] = useState<DailyExpense[]>([]);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('');
   const [note, setNote] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [loadingExpenses, setLoadingExpenses] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const { toasts, showToast, hideToast } = useToast();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -21,22 +30,43 @@ export default function DailyPage() {
     }
   }, [user, loading, router]);
 
+  // Fetch expenses from Firestore
   useEffect(() => {
     if (user) {
-      const savedExpenses = localStorage.getItem('dailyExpenses');
-      if (savedExpenses) {
-        setExpenses(JSON.parse(savedExpenses));
-      }
+      fetchExpenses();
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user && expenses.length > 0) {
-      localStorage.setItem('dailyExpenses', JSON.stringify(expenses));
+  const fetchExpenses = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingExpenses(true);
+      const expensesRef = collection(db, 'expenses');
+      const q = query(
+        expensesRef,
+        where('userId', '==', user.uid)
+      );
+      
+      const snapshot = await getDocs(q);
+      const fetchedExpenses = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as DailyExpense[];
+      
+      // Sort in memory instead of Firestore
+      fetchedExpenses.sort((a, b) => b.timestamp - a.timestamp);
+      
+      setExpenses(fetchedExpenses);
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      showToast('Ошибка загрузки расходов', 'error');
+    } finally {
+      setLoadingExpenses(false);
     }
-  }, [expenses, user]);
+  };
 
-  if (loading || !user) {
+  if (loading || loadingPremium || !user) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-gray-600">Загрузка...</div>
@@ -48,30 +78,56 @@ export default function DailyPage() {
   const todayExpenses = expenses.filter(exp => exp.date === today);
   const todayTotal = todayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  const handleAddExpense = () => {
+  const handleAddExpense = async () => {
     if (!amount || !category) {
-      alert('Пожалуйста, заполните сумму и категорию');
+      showToast('Пожалуйста, заполните сумму и категорию', 'error');
       return;
     }
 
-    const newExpense: DailyExpense = {
-      id: Date.now().toString(),
-      amount: parseFloat(amount),
-      category,
-      note,
-      date: today,
-      timestamp: Date.now(),
-    };
+    if (!user) return;
 
-    setExpenses([newExpense, ...expenses]);
-    setAmount('');
-    setCategory('');
-    setNote('');
-    setShowForm(false);
+    try {
+      setSaving(true);
+      const expensesRef = collection(db, 'expenses');
+      const newExpense = {
+        userId: user.uid,
+        amount: parseFloat(amount),
+        category,
+        note,
+        date: today,
+        timestamp: Date.now(),
+        createdAt: serverTimestamp(),
+      };
+
+      const docRef = await addDoc(expensesRef, newExpense);
+      
+      // Add to local state
+      setExpenses([{ id: docRef.id, ...newExpense } as DailyExpense, ...expenses]);
+      
+      setAmount('');
+      setCategory('');
+      setNote('');
+      setShowForm(false);
+      showToast('Расход добавлен', 'success');
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      showToast('Ошибка при добавлении расхода', 'error');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleDeleteExpense = (id: string) => {
-    setExpenses(expenses.filter(exp => exp.id !== id));
+  const handleDeleteExpense = async (id: string) => {
+    if (!confirm('Удалить этот расход?')) return;
+
+    try {
+      await deleteDoc(doc(db, 'expenses', id));
+      setExpenses(expenses.filter(exp => exp.id !== id));
+      showToast('Расход удален', 'success');
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      showToast('Ошибка при удалении расхода', 'error');
+    }
   };
 
   const categoryOptions = [
@@ -89,9 +145,14 @@ export default function DailyPage() {
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar userEmail={user.email} />
+      <Sidebar 
+        userEmail={user.email}
+        isPremium={isPremium}
+        isTrialActive={isTrialActive}
+        trialDaysLeft={trialDaysLeft}
+      />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Ежедневные расходы</h1>
@@ -126,7 +187,8 @@ export default function DailyPage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     placeholder="1000"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={saving}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   />
                 </div>
                 <div>
@@ -136,7 +198,8 @@ export default function DailyPage() {
                   <select
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={saving}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                   >
                     <option value="">Выберите категорию</option>
                     {categoryOptions.map((cat) => (
@@ -156,14 +219,16 @@ export default function DailyPage() {
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="Например: Обед в кафе"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={saving}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                 />
               </div>
               <button
                 onClick={handleAddExpense}
-                className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors"
+                disabled={saving}
+                className="w-full py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Добавить расход
+                {saving ? 'Сохранение...' : 'Добавить расход'}
               </button>
             </div>
           )}
@@ -172,7 +237,11 @@ export default function DailyPage() {
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
             <h2 className="text-xl font-bold text-gray-900 mb-4">Расходы за сегодня</h2>
             
-            {todayExpenses.length === 0 ? (
+            {loadingExpenses ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Загрузка...</p>
+              </div>
+            ) : todayExpenses.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-gray-500 mb-4">Сегодня расходов пока нет</p>
                 <button
@@ -268,6 +337,16 @@ export default function DailyPage() {
           )}
         </div>
       </main>
+      
+      {/* Toast Notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => hideToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { getAuth, Auth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -17,6 +17,11 @@ let auth: Auth;
 if (typeof window !== 'undefined') {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   auth = getAuth(app);
+  
+  // Set persistence to keep user logged in
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    console.error('Error setting persistence:', error);
+  });
 }
 
 // Export with type assertion for server-side compatibility

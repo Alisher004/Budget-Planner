@@ -10,7 +10,7 @@ import { Category } from '../../types';
 
 export default function ReportsPage() {
   const { user, loading } = useAuth();
-  const { isPremium, loading: loadingPremium } = usePremium(user);
+  const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
   const [salary, setSalary] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -53,24 +53,24 @@ export default function ReportsPage() {
   };
 
   return (
-    <PremiumGate isPremium={isPremium}>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar userEmail={user.email} isPremium={isPremium} />
+    <PremiumGate isPremium={isPremium} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft}>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <Sidebar userEmail={user.email} isPremium={isPremium} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft} />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 overflow-y-auto lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Отчеты</h1>
-            <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Отчеты</h1>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               <button
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+                className="px-3 sm:px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 📊 Экспорт CSV
               </button>
               <button
                 onClick={handleExportPDF}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors"
+                className="px-3 sm:px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-medium rounded-lg transition-colors"
               >
                 📄 Экспорт PDF
               </button>
@@ -78,12 +78,12 @@ export default function ReportsPage() {
           </div>
 
           {/* Month Filter */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Выберите месяц</label>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4 sm:mb-6">
+            <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2">Выберите месяц</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-3 sm:px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option>Март 2026</option>
               <option>Февраль 2026</option>
@@ -93,21 +93,21 @@ export default function ReportsPage() {
           </div>
 
           {/* Summary Report */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Месячный отчет - {selectedMonth}</h2>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Месячный отчет - {selectedMonth}</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Общий доход</p>
-                <p className="text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
+              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Общий доход</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
               </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Всего потрачено</p>
-                <p className="text-3xl font-bold text-red-600">{totalSpent.toLocaleString('ru-RU')} ₽</p>
+              <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg">
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Всего потрачено</p>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{totalSpent.toLocaleString('ru-RU')} ₽</p>
               </div>
-              <div className={`text-center p-4 rounded-lg ${remaining >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
-                <p className="text-sm text-gray-600 mb-1">Остаток</p>
-                <p className={`text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div className={`text-center p-3 sm:p-4 rounded-lg ${remaining >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+                <p className="text-xs sm:text-sm text-gray-600 mb-1">Остаток</p>
+                <p className={`text-2xl sm:text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {remaining.toLocaleString('ru-RU')} ₽
                 </p>
               </div>
@@ -130,26 +130,26 @@ export default function ReportsPage() {
           </div>
 
           {/* Category Breakdown */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Детализация по категориям</h2>
-            <div className="overflow-x-auto">
-              <table className="w-full">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Детализация по категориям</h2>
+            <div className="overflow-x-auto -mx-4 sm:mx-0">
+              <table className="w-full min-w-[500px]">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Категория</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Процент</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Сумма</th>
-                    <th className="text-right py-3 px-4 text-sm font-semibold text-gray-700">Статус</th>
+                    <th className="text-left py-3 px-4 text-xs sm:text-sm font-semibold text-gray-700">Категория</th>
+                    <th className="text-right py-3 px-4 text-xs sm:text-sm font-semibold text-gray-700">Процент</th>
+                    <th className="text-right py-3 px-4 text-xs sm:text-sm font-semibold text-gray-700">Сумма</th>
+                    <th className="text-right py-3 px-4 text-xs sm:text-sm font-semibold text-gray-700">Статус</th>
                   </tr>
                 </thead>
                 <tbody>
                   {categories.map((cat) => (
                     <tr key={cat.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 text-sm text-gray-900">{cat.name}</td>
-                      <td className="py-3 px-4 text-sm text-right font-semibold text-gray-900">
+                      <td className="py-3 px-4 text-xs sm:text-sm text-gray-900">{cat.name}</td>
+                      <td className="py-3 px-4 text-xs sm:text-sm text-right font-semibold text-gray-900">
                         {cat.percentage.toFixed(1)}%
                       </td>
-                      <td className="py-3 px-4 text-sm text-right font-semibold text-gray-900">
+                      <td className="py-3 px-4 text-xs sm:text-sm text-right font-semibold text-gray-900">
                         {cat.amount.toLocaleString('ru-RU')} ₽
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -164,11 +164,11 @@ export default function ReportsPage() {
                     </tr>
                   ))}
                   <tr className="bg-gray-50 font-bold">
-                    <td className="py-3 px-4 text-sm text-gray-900">ИТОГО</td>
-                    <td className="py-3 px-4 text-sm text-right text-gray-900">
+                    <td className="py-3 px-4 text-xs sm:text-sm text-gray-900">ИТОГО</td>
+                    <td className="py-3 px-4 text-xs sm:text-sm text-right text-gray-900">
                       {totalPercentage.toFixed(1)}%
                     </td>
-                    <td className="py-3 px-4 text-sm text-right text-gray-900">
+                    <td className="py-3 px-4 text-xs sm:text-sm text-right text-gray-900">
                       {totalSpent.toLocaleString('ru-RU')} ₽
                     </td>
                     <td className="py-3 px-4"></td>

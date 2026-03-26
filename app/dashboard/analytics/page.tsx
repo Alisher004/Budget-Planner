@@ -8,12 +8,14 @@ import Sidebar from '../../components/Sidebar';
 import PremiumGate from '../../components/PremiumGate';
 import { Category, DailyExpense } from '../../types';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firestore';
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#14B8A6', '#F97316'];
 
 export default function AnalyticsPage() {
   const { user, loading } = useAuth();
-  const { isPremium, loading: loadingPremium } = usePremium(user);
+  const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
   const [salary, setSalary] = useState(0);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -29,13 +31,32 @@ export default function AnalyticsPage() {
     if (user) {
       const savedSalary = localStorage.getItem('salary');
       const savedCategories = localStorage.getItem('categories');
-      const savedDailyExpenses = localStorage.getItem('dailyExpenses');
       
       if (savedSalary) setSalary(Number(savedSalary));
       if (savedCategories) setCategories(JSON.parse(savedCategories));
-      if (savedDailyExpenses) setDailyExpenses(JSON.parse(savedDailyExpenses));
+      
+      // Fetch daily expenses from Firestore
+      fetchDailyExpenses();
     }
   }, [user]);
+
+  const fetchDailyExpenses = async () => {
+    if (!user) return;
+    
+    try {
+      const expensesRef = collection(db, 'expenses');
+      const q = query(expensesRef, where('userId', '==', user.uid));
+      const snapshot = await getDocs(q);
+      const fetchedExpenses = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as DailyExpense[];
+      
+      setDailyExpenses(fetchedExpenses);
+    } catch (error) {
+      console.error('Error fetching daily expenses:', error);
+    }
+  };
 
   if (loading || loadingPremium || !user) {
     return (
@@ -75,42 +96,45 @@ export default function AnalyticsPage() {
     { month: 'Мар', planned: totalPlanned, daily: totalDailySpent, remaining: remaining },
   ];
 
+  // Check access - single source of truth
+  const hasAccess = isPremium || isTrialActive;
+
   return (
-    <PremiumGate isPremium={isPremium}>
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar userEmail={user.email} isPremium={isPremium} />
+    <PremiumGate isPremium={isPremium} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft}>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <Sidebar userEmail={user.email} isPremium={isPremium} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft} />
       
-      <main className="flex-1 p-8">
+      <main className="flex-1 overflow-y-auto lg:ml-64 p-4 sm:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8">Аналитика</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 sm:mb-8">Аналитика</h1>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <p className="text-sm text-gray-600 mb-2">Общий доход</p>
-              <p className="text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Общий доход</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <p className="text-sm text-gray-600 mb-2">Запланировано</p>
-              <p className="text-3xl font-bold text-purple-600">{totalPlanned.toLocaleString('ru-RU')} ₽</p>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Запланировано</p>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-600">{totalPlanned.toLocaleString('ru-RU')} ₽</p>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <p className="text-sm text-gray-600 mb-2">Ежедневные расходы</p>
-              <p className="text-3xl font-bold text-orange-600">{totalDailySpent.toLocaleString('ru-RU')} ₽</p>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Ежедневные расходы</p>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-600">{totalDailySpent.toLocaleString('ru-RU')} ₽</p>
             </div>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <p className="text-sm text-gray-600 mb-2">Остаток</p>
-              <p className={`text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <p className="text-xs sm:text-sm text-gray-600 mb-2">Остаток</p>
+              <p className={`text-2xl sm:text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {remaining.toLocaleString('ru-RU')} ₽
               </p>
             </div>
           </div>
 
           {/* Charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mb-4 sm:mb-6">
             {/* Planned Budget Pie Chart */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Планируемый бюджет</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Планируемый бюджет</h2>
               {pieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -137,8 +161,8 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Daily Expenses Pie Chart */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Ежедневные расходы</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Ежедневные расходы</h2>
               {dailyPieData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={300}>
                   <PieChart>
@@ -166,8 +190,8 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Bar Chart */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Динамика по месяцам</h2>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Динамика по месяцам</h2>
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={barData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -183,9 +207,9 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Category Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Планируемые категории</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Планируемые категории</h2>
               <div className="space-y-3">
                 {categories.map((cat, index) => (
                   <div key={cat.id} className="flex items-center gap-4">
@@ -205,8 +229,8 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">Ежедневные расходы</h2>
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4">Ежедневные расходы</h2>
               <div className="space-y-3">
                 {Object.entries(dailyByCategory).map(([category, amount], index) => (
                   <div key={category} className="flex items-center gap-4">

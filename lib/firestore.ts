@@ -33,6 +33,7 @@ export async function createUser(userId: string, email: string) {
   await setDoc(doc(db, 'users', userId), {
     email,
     isPremium: false,
+    trialStart: serverTimestamp(),
     createdAt: serverTimestamp(),
   });
 }

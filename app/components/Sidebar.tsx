@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { signOut } from 'firebase/auth';
@@ -5,15 +7,19 @@ import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { isAdmin } from '@/lib/admin';
 import PremiumBadge from './PremiumBadge';
+import { useState } from 'react';
 
 interface SidebarProps {
   userEmail: string | null;
   isPremium?: boolean;
+  isTrialActive?: boolean;
+  trialDaysLeft?: number;
 }
 
-export default function Sidebar({ userEmail, isPremium = false }: SidebarProps) {
+export default function Sidebar({ userEmail, isPremium = false, isTrialActive = false, trialDaysLeft = 0 }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
 
   const menuItems = [
     { name: 'Обзор', path: '/dashboard', icon: '📊' },
@@ -35,9 +41,12 @@ export default function Sidebar({ userEmail, isPremium = false }: SidebarProps) 
   };
 
   const showAdmin = userEmail && isAdmin(userEmail);
+  const hasAccess = isPremium || isTrialActive;
 
-  return (
-    <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
+  const closeSidebar = () => setIsOpen(false);
+
+  const SidebarContent = () => (
+    <>
       {/* Logo/Header */}
       <div className="p-6 border-b border-gray-200">
         <h1 className="text-2xl font-bold text-gray-900">💰 Бюджет</h1>
@@ -54,24 +63,46 @@ export default function Sidebar({ userEmail, isPremium = false }: SidebarProps) 
             <p className="text-xs text-gray-500">Пользователь</p>
           </div>
         </div>
+        
+        {/* Premium/Trial Badge */}
         {isPremium && (
           <div className="mt-3">
             <PremiumBadge />
           </div>
         )}
+        
+        {!isPremium && isTrialActive && (
+          <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+            <p className="text-xs font-semibold text-blue-800">
+              🎁 Пробный период
+            </p>
+            <p className="text-xs text-blue-600 mt-1">
+              Осталось {trialDaysLeft} {trialDaysLeft === 1 ? 'день' : trialDaysLeft < 5 ? 'дня' : 'дней'}
+            </p>
+          </div>
+        )}
+        
+        {!isPremium && !isTrialActive && (
+          <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+            <p className="text-xs font-semibold text-gray-700">
+              Бесплатный план
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
           {menuItems.map((item) => {
             const isActive = pathname === item.path;
-            const isLocked = item.premium && !isPremium;
+            const isLocked = item.premium && !hasAccess;
             
             return (
               <li key={item.path}>
                 <Link
                   href={item.path}
+                  onClick={closeSidebar}
                   className={`flex items-center justify-between gap-3 px-4 py-3 rounded-lg transition-colors ${
                     isActive
                       ? 'bg-blue-50 text-blue-600 font-semibold'
@@ -92,6 +123,7 @@ export default function Sidebar({ userEmail, isPremium = false }: SidebarProps) 
             <li className="pt-4 border-t border-gray-200">
               <Link
                 href="/admin"
+                onClick={closeSidebar}
                 className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
                   pathname === '/admin'
                     ? 'bg-purple-50 text-purple-600 font-semibold'
@@ -116,6 +148,43 @@ export default function Sidebar({ userEmail, isPremium = false }: SidebarProps) 
           <span className="font-medium">Выйти</span>
         </button>
       </div>
-    </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Burger Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="lg:hidden fixed top-4 left-4 z-[60] bg-white p-2 rounded-lg shadow-lg border border-gray-200"
+        aria-label="Toggle menu"
+      >
+        <div className="w-6 h-5 flex flex-col justify-between">
+          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'opacity-0' : ''}`}></span>
+          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+        </div>
+      </button>
+
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[45]"
+          onClick={closeSidebar}
+        />
+      )}
+
+      {/* Sidebar - Desktop: fixed, Mobile: slide-in */}
+      <div
+        className={`
+          fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-[50]
+          transition-transform duration-300 ease-in-out
+          lg:translate-x-0
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        `}
+      >
+        <SidebarContent />
+      </div>
+    </>
   );
 }
