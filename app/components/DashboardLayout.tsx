@@ -28,8 +28,8 @@ export default function DashboardLayout({
         trialDaysLeft={trialDaysLeft}
       />
 
-      {/* Main Content - Scrollable */}
-      <main className="flex-1 overflow-y-auto lg:ml-64">
+      {/* Main Content - Scrollable, with padding for mobile header */}
+      <main className="flex-1 overflow-y-auto lg:ml-64 pt-16 lg:pt-0">
         <div className="min-h-full">
           {children}
         </div>

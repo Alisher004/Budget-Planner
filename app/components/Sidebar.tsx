@@ -153,38 +153,43 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
 
   return (
     <>
-      {/* Mobile Burger Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="lg:hidden fixed top-4 left-4 z-[60] bg-white p-2 rounded-lg shadow-lg border border-gray-200"
-        aria-label="Toggle menu"
-      >
-        <div className="w-6 h-5 flex flex-col justify-between">
-          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
-          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'opacity-0' : ''}`}></span>
-          <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
-        </div>
-      </button>
+      {/* Mobile Header with Burger Menu */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50 h-16 flex items-center px-4">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          aria-label="Toggle menu"
+        >
+          <div className="w-6 h-5 flex flex-col justify-between">
+            <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'rotate-45 translate-y-2' : ''}`}></span>
+            <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? 'opacity-0' : ''}`}></span>
+            <span className={`block h-0.5 bg-gray-800 transition-all ${isOpen ? '-rotate-45 -translate-y-2' : ''}`}></span>
+          </div>
+        </button>
+        <h1 className="ml-4 text-xl font-bold text-gray-900">💰 Бюджет</h1>
+      </header>
 
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[45]"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-4"
           onClick={closeSidebar}
+          aria-label="Close menu"
         />
       )}
 
       {/* Sidebar - Desktop: fixed, Mobile: slide-in */}
-      <div
+      <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-[50]
+          fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-9999
           transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
+        aria-label="Main navigation"
       >
         <SidebarContent />
-      </div>
+      </aside>
     </>
   );
 }
