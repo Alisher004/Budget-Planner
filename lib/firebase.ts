@@ -18,7 +18,8 @@ if (typeof window !== 'undefined') {
   app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   auth = getAuth(app);
   
-  // Set persistence to keep user logged in
+  // Set persistence IMMEDIATELY when auth is initialized
+  // This ensures auth state persists across page refreshes and browser restarts
   setPersistence(auth, browserLocalPersistence).catch((error) => {
     console.error('Error setting persistence:', error);
   });
