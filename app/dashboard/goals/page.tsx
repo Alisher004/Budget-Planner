@@ -120,7 +120,7 @@ export default function GoalsPage() {
           {/* Savings Info */}
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg shadow-md p-6 mb-8 text-white">
             <h2 className="text-xl font-bold mb-2">Доступно для накоплений</h2>
-            <p className="text-4xl font-bold">{remaining.toLocaleString('ru-RU')} ₽</p>
+            <p className="text-4xl font-bold">{remaining.toLocaleString('ru-RU')} с</p>
             <p className="text-sm mt-2 opacity-90">
               {remaining > 0 ? 'Отличная работа! У вас есть средства для достижения целей.' : 'Оптимизируйте расходы для накоплений.'}
             </p>
@@ -196,7 +196,7 @@ export default function GoalsPage() {
 
                   <div className="flex items-center justify-between text-sm text-gray-600">
                     <span>
-                      {goal.current.toLocaleString('ru-RU')} ₽ из {goal.target.toLocaleString('ru-RU')} ₽
+                      {goal.current.toLocaleString('ru-RU')} с из {goal.target.toLocaleString('ru-RU')} с
                     </span>
                     <span className={daysLeft > 0 ? 'text-gray-600' : 'text-red-600'}>
                       {daysLeft > 0 ? `${daysLeft} дней осталось` : 'Срок истек'}

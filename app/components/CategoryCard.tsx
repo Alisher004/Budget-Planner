@@ -60,7 +60,7 @@ export default function CategoryCard({
               step="100"
               className="w-full pl-3 pr-8 py-2 text-gray-900 font-semibold bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₽</span>
+            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">с</span>
           </div>
         </div>
       </div>

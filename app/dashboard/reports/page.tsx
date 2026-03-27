@@ -99,16 +99,16 @@ export default function ReportsPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 mb-4 sm:mb-6">
               <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">Общий доход</p>
-                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
+                <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} с</p>
               </div>
               <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg">
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">Всего потрачено</p>
-                <p className="text-2xl sm:text-3xl font-bold text-red-600">{totalSpent.toLocaleString('ru-RU')} ₽</p>
+                <p className="text-2xl sm:text-3xl font-bold text-red-600">{totalSpent.toLocaleString('ru-RU')} с</p>
               </div>
               <div className={`text-center p-3 sm:p-4 rounded-lg ${remaining >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
                 <p className="text-xs sm:text-sm text-gray-600 mb-1">Остаток</p>
                 <p className={`text-2xl sm:text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {remaining.toLocaleString('ru-RU')} ₽
+                  {remaining.toLocaleString('ru-RU')} с
                 </p>
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function ReportsPage() {
                         {cat.percentage.toFixed(1)}%
                       </td>
                       <td className="py-3 px-4 text-xs sm:text-sm text-right font-semibold text-gray-900">
-                        {cat.amount.toLocaleString('ru-RU')} ₽
+                        {cat.amount.toLocaleString('ru-RU')} с
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${
@@ -169,7 +169,7 @@ export default function ReportsPage() {
                       {totalPercentage.toFixed(1)}%
                     </td>
                     <td className="py-3 px-4 text-xs sm:text-sm text-right text-gray-900">
-                      {totalSpent.toLocaleString('ru-RU')} ₽
+                      {totalSpent.toLocaleString('ru-RU')} с
                     </td>
                     <td className="py-3 px-4"></td>
                   </tr>

@@ -24,7 +24,7 @@ export default function Summary({ salary, categories }: SummaryProps) {
         </div>
         <div className="text-right">
           <div className="text-2xl font-bold text-gray-900">
-            {usedAmount.toFixed(0)} ₽
+            {usedAmount.toFixed(0)} с
           </div>
         </div>
       </div>

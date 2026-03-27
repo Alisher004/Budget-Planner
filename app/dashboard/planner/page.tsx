@@ -138,7 +138,7 @@ export default function PlannerPage() {
                 min="0"
                 className="w-full text-center text-4xl font-bold text-gray-900 bg-transparent border-b-4 border-blue-500 focus:outline-none focus:border-blue-600 pb-2"
               />
-              <div className="text-center text-3xl font-bold text-gray-900 mt-1">₽</div>
+              <div className="text-center text-3xl font-bold text-gray-900 mt-1">с</div>
             </div>
           </div>
 
@@ -147,7 +147,7 @@ export default function PlannerPage() {
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Потрачено</p>
-                <p className="text-2xl font-bold text-gray-900">{totalSpent.toLocaleString('ru-RU')} ₽</p>
+<p className="text-2xl font-bold text-gray-900">{totalSpent.toLocaleString('ru-RU')} с</p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Использовано</p>
@@ -158,7 +158,7 @@ export default function PlannerPage() {
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Остаток</p>
                 <p className={`text-2xl font-bold ${remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {remaining.toLocaleString('ru-RU')} ₽
+                  {remaining.toLocaleString('ru-RU')} с
                 </p>
               </div>
             </div>

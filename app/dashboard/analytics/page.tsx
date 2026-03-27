@@ -112,20 +112,20 @@ export default function AnalyticsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Общий доход</p>
-              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-2xl sm:text-3xl font-bold text-blue-600">{salary.toLocaleString('ru-RU')} с</p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Запланировано</p>
-              <p className="text-2xl sm:text-3xl font-bold text-purple-600">{totalPlanned.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-2xl sm:text-3xl font-bold text-purple-600">{totalPlanned.toLocaleString('ru-RU')} с</p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Ежедневные расходы</p>
-              <p className="text-2xl sm:text-3xl font-bold text-orange-600">{totalDailySpent.toLocaleString('ru-RU')} ₽</p>
+              <p className="text-2xl sm:text-3xl font-bold text-orange-600">{totalDailySpent.toLocaleString('ru-RU')} с</p>
             </div>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 sm:p-6">
               <p className="text-xs sm:text-sm text-gray-600 mb-2">Остаток</p>
               <p className={`text-2xl sm:text-3xl font-bold ${remaining >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {remaining.toLocaleString('ru-RU')} ₽
+                {remaining.toLocaleString('ru-RU')} с
               </p>
             </div>
           </div>
@@ -152,7 +152,7 @@ export default function AnalyticsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} ₽`} />
+                    <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} с`} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -180,7 +180,7 @@ export default function AnalyticsPage() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} ₽`} />
+                    <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} с`} />
                   </PieChart>
                 </ResponsiveContainer>
               ) : (
@@ -197,7 +197,7 @@ export default function AnalyticsPage() {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} ₽`} />
+                <Tooltip formatter={(value: number) => `${value.toLocaleString('ru-RU')} с`} />
                 <Legend />
                 <Bar dataKey="planned" fill="#8B5CF6" name="Запланировано" />
                 <Bar dataKey="daily" fill="#F97316" name="Ежедневные" />
@@ -221,7 +221,7 @@ export default function AnalyticsPage() {
                       <p className="text-sm font-medium text-gray-900">{cat.name}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">{cat.amount.toLocaleString('ru-RU')} ₽</p>
+                      <p className="text-sm font-semibold text-gray-900">{cat.amount.toLocaleString('ru-RU')} с</p>
                       <p className="text-xs text-gray-500">{cat.percentage.toFixed(1)}%</p>
                     </div>
                   </div>
@@ -242,7 +242,7 @@ export default function AnalyticsPage() {
                       <p className="text-sm font-medium text-gray-900">{category}</p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-gray-900">{amount.toLocaleString('ru-RU')} ₽</p>
+                      <p className="text-sm font-semibold text-gray-900">{amount.toLocaleString('ru-RU')} с</p>
                     </div>
                   </div>
                 ))}

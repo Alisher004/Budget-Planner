@@ -45,7 +45,7 @@ export default function CategoryItem({
           step="1000"
           className="w-24 text-right text-base font-bold text-gray-900 bg-transparent focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-400 rounded px-2 py-1"
         />
-        <span className="text-base font-bold text-gray-900">₽</span>
+        <span className="text-base font-bold text-gray-900">с</span>
         
         <button
           className="opacity-0 group-hover:opacity-100 text-red-600 hover:text-red-800 text-xs font-medium transition-opacity ml-2"

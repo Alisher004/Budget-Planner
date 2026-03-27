@@ -115,19 +115,19 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <SummaryCard
               title="Месячный доход"
-              value={`${salary.toLocaleString('ru-RU')} ₽`}
-              icon="�"
+              value={`${salary.toLocaleString('ru-RU')} с`}
+              icon="💰"
               color="blue"
             />
             <SummaryCard
               title="Потрачено"
-              value={`${(totalSpent + totalDailySpent).toLocaleString('ru-RU')} ₽`}
+              value={`${(totalSpent + totalDailySpent).toLocaleString('ru-RU')} с`}
               icon="💸"
               color="red"
             />
             <SummaryCard
               title="Остаток"
-              value={`${remaining.toLocaleString('ru-RU')} ₽`}
+              value={`${remaining.toLocaleString('ru-RU')} с`}
               icon="💵"
               color={remaining >= 0 ? 'green' : 'red'}
               trend={remaining >= 0 ? 'up' : 'down'}
@@ -172,7 +172,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                       <span className="text-xs sm:text-sm font-semibold text-gray-900">{cat.percentage.toFixed(1)}%</span>
-                      <span className="text-xs sm:text-sm text-gray-600">{cat.amount.toLocaleString('ru-RU')} ₽</span>
+                      <span className="text-xs sm:text-sm text-gray-600">{cat.amount.toLocaleString('ru-RU')} с</span>
                     </div>
                   </div>
                 ))}
@@ -216,7 +216,7 @@ export default function DashboardPage() {
                 {remaining < 0 && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                     <p className="text-xs sm:text-sm text-red-700 font-medium">
-                      ⚠️ Дефицит: {Math.abs(remaining).toLocaleString('ru-RU')} ₽
+                      ⚠️ Дефицит: {Math.abs(remaining).toLocaleString('ru-RU')} с
                     </p>
                   </div>
                 )}

@@ -167,7 +167,7 @@ export default function DailyPage() {
           {/* Today's Summary */}
           <div className="bg-gradient-to-r from-orange-500 to-red-500 rounded-lg shadow-md p-6 mb-8 text-white">
             <h2 className="text-xl font-bold mb-2">Сегодня потрачено</h2>
-            <p className="text-5xl font-bold">{todayTotal.toLocaleString('ru-RU')} ₽</p>
+            <p className="text-5xl font-bold">{todayTotal.toLocaleString('ru-RU')} с</p>
             <p className="text-sm mt-2 opacity-90">
               {todayExpenses.length} {todayExpenses.length === 1 ? 'расход' : 'расходов'}
             </p>
@@ -275,7 +275,7 @@ export default function DailyPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-xl font-bold text-gray-900">
-                        {expense.amount.toLocaleString('ru-RU')} ₽
+                        {expense.amount.toLocaleString('ru-RU')} с
                       </span>
                       <button
                         onClick={() => handleDeleteExpense(expense.id)}
@@ -321,7 +321,7 @@ export default function DailyPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <span className="text-xl font-bold text-gray-900">
-                          {expense.amount.toLocaleString('ru-RU')} ₽
+                          {expense.amount.toLocaleString('ru-RU')} с
                         </span>
                         <button
                           onClick={() => handleDeleteExpense(expense.id)}
