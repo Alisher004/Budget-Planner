@@ -8,6 +8,8 @@ import { useRouter } from 'next/navigation';
 import { isAdmin } from '@/lib/admin';
 import PremiumBadge from './PremiumBadge';
 import { useState } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { useTranslations } from '@/lib/i18n';
 
 interface SidebarProps {
   userEmail: string | null;
@@ -20,15 +22,17 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
   const pathname = usePathname();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
+  const { language, setLanguage } = useLanguage();
+  const { t } = useTranslations(language);
 
   const menuItems = [
-    { name: 'Обзор', path: '/dashboard', icon: '📊' },
-    { name: 'Планировщик', path: '/dashboard/planner', icon: '💼' },
-    { name: 'Калькулятор', path: '/dashboard/calculator', icon: '🧮' },
-    { name: 'Ежедневные', path: '/dashboard/daily', icon: '📝' },
-    { name: 'Аналитика', path: '/dashboard/analytics', icon: '📈', premium: true },
-    { name: 'Отчеты', path: '/dashboard/reports', icon: '📋', premium: true },
-    { name: 'Цели', path: '/dashboard/goals', icon: '🎯' },
+    { name: t('dashboard'), path: '/dashboard', icon: '📊' },
+    { name: t('planner'), path: '/dashboard/planner', icon: '💼' },
+    { name: t('calculator'), path: '/dashboard/calculator', icon: '🧮' },
+    { name: t('daily'), path: '/dashboard/daily', icon: '📝' },
+    { name: t('analytics'), path: '/dashboard/analytics', icon: '📈', premium: true },
+    { name: t('reports'), path: '/dashboard/reports', icon: '📋', premium: true },
+    { name: t('goals'), path: '/dashboard/goals', icon: '🎯' },
   ];
 
   const handleLogout = async () => {
@@ -60,7 +64,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-gray-900 truncate">{userEmail}</p>
-            <p className="text-xs text-gray-500">Пользователь</p>
+            <p className="text-xs text-gray-500">{t('user')}</p>
           </div>
         </div>
         
@@ -74,10 +78,10 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
         {!isPremium && isTrialActive && (
           <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
             <p className="text-xs font-semibold text-blue-800">
-              🎁 Пробный период
+              🎁 {t('trial')}
             </p>
             <p className="text-xs text-blue-600 mt-1">
-              Осталось {trialDaysLeft} {trialDaysLeft === 1 ? 'день' : trialDaysLeft < 5 ? 'дня' : 'дней'}
+              {trialDaysLeft} {t('daysLeft')}
             </p>
           </div>
         )}
@@ -85,7 +89,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
         {!isPremium && !isTrialActive && (
           <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
             <p className="text-xs font-semibold text-gray-700">
-              Бесплатный план
+              {t('freePlan')}
             </p>
           </div>
         )}
@@ -131,12 +135,38 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
                 }`}
               >
                 <span className="text-xl">👑</span>
-                <span>Админ панель</span>
+                <span>{t('adminPanel')}</span>
               </Link>
             </li>
           )}
         </ul>
       </nav>
+
+      {/* Language Switcher */}
+      <div className="p-4 border-t border-gray-200">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLanguage('ru')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              language === 'ru'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            RU
+          </button>
+          <button
+            onClick={() => setLanguage('kg')}
+            className={`flex-1 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+              language === 'kg'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            KG
+          </button>
+        </div>
+      </div>
 
       {/* Logout Button */}
       <div className="p-4 border-t border-gray-200">
@@ -145,7 +175,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
           className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
         >
           <span className="text-xl">🚪</span>
-          <span className="font-medium">Выйти</span>
+          <span className="font-medium">{t('logout')}</span>
         </button>
       </div>
     </>
@@ -157,7 +187,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
       <header className="lg:hidden fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50 h-16 flex items-center px-4">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="p-2 rounded-lg hover:bg-gray-100 transition-colors z-50"
           aria-label="Toggle menu"
         >
           <div className="w-6 h-5 flex flex-col justify-between">
@@ -172,7 +202,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-4"
+          className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
           onClick={closeSidebar}
           aria-label="Close menu"
         />
@@ -181,7 +211,7 @@ export default function Sidebar({ userEmail, isPremium = false, isTrialActive = 
       {/* Sidebar - Desktop: fixed, Mobile: slide-in */}
       <aside
         className={`
-          fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-9999
+          fixed top-0 left-0 h-full w-64 bg-white border-r border-gray-200 flex flex-col z-50
           transition-transform duration-300 ease-in-out
           lg:translate-x-0
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}

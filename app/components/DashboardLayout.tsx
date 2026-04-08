@@ -19,7 +19,7 @@ export default function DashboardLayout({
   trialDaysLeft,
 }: DashboardLayoutProps) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50 w-full max-w-full">
       {/* Sidebar - Fixed */}
       <Sidebar
         userEmail={userEmail}
@@ -29,8 +29,8 @@ export default function DashboardLayout({
       />
 
       {/* Main Content - Scrollable, with padding for mobile header */}
-      <main className="flex-1 overflow-y-auto lg:ml-64 pt-16 lg:pt-0">
-        <div className="min-h-full">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden lg:ml-64 pt-16 lg:pt-0 w-full max-w-full">
+        <div className="min-h-full w-full max-w-full">
           {children}
         </div>
       </main>

@@ -8,6 +8,26 @@ export interface Insight {
   icon: string;
 }
 
+// Helper function to get current month expenses only
+function getCurrentMonthExpenses(dailyExpenses: DailyExpense[]): DailyExpense[] {
+  const now = new Date();
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  
+  return dailyExpenses.filter(exp => {
+    const expDate = new Date(exp.date);
+    return expDate.getMonth() === currentMonth && expDate.getFullYear() === currentYear;
+  });
+}
+
+// Helper function to get last 7 days expenses
+function getRecentExpenses(dailyExpenses: DailyExpense[], days: number = 7): DailyExpense[] {
+  const daysAgo = new Date();
+  daysAgo.setDate(daysAgo.getDate() - days);
+  
+  return dailyExpenses.filter(exp => new Date(exp.date) >= daysAgo);
+}
+
 export function generateBudgetInsights(
   salary: number,
   categories: Category[],
@@ -19,8 +39,10 @@ export function generateBudgetInsights(
     return insights;
   }
 
+  // Use ONLY current month expenses
+  const currentMonthExpenses = getCurrentMonthExpenses(dailyExpenses);
+  const totalDailySpent = currentMonthExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const totalPlanned = categories.reduce((sum, cat) => sum + cat.amount, 0);
-  const totalDailySpent = dailyExpenses.reduce((sum, exp) => sum + exp.amount, 0);
   const totalExpenses = totalPlanned + totalDailySpent;
   const remaining = salary - totalExpenses;
   const savingsPercentage = (remaining / salary) * 100;
@@ -31,7 +53,7 @@ export function generateBudgetInsights(
       id: 'budget-exceeded',
       type: 'warning',
       title: 'Превышение бюджета',
-      message: `Ваши расходы (${totalExpenses.toLocaleString('ru-RU')} ₽) превышают доход на ${(totalExpenses - salary).toLocaleString('ru-RU')} ₽. Необходимо сократить расходы.`,
+      message: `Ваши расходы в этом месяце (${totalExpenses.toLocaleString('ru-RU')} с) превышают доход на ${(totalExpenses - salary).toLocaleString('ru-RU')} с.`,
       icon: '⚠️',
     });
   }
@@ -42,7 +64,7 @@ export function generateBudgetInsights(
       id: 'low-savings',
       type: 'suggestion',
       title: 'Низкий уровень накоплений',
-      message: `Вы откладываете только ${savingsPercentage.toFixed(1)}%. Рекомендуется откладывать минимум 20% дохода (${(salary * 0.2).toLocaleString('ru-RU')} ₽).`,
+      message: `Вы откладываете только ${savingsPercentage.toFixed(1)}% в этом месяце. Рекомендуется откладывать минимум 20% дохода.`,
       icon: '💡',
     });
   }
@@ -53,43 +75,39 @@ export function generateBudgetInsights(
       id: 'good-savings',
       type: 'positive',
       title: 'Отличные накопления!',
-      message: `Вы откладываете ${savingsPercentage.toFixed(1)}% дохода. Продолжайте в том же духе!`,
+      message: `Вы откладываете ${savingsPercentage.toFixed(1)}% дохода в этом месяце. Продолжайте в том же духе!`,
       icon: '🎉',
     });
   }
 
-  // Insight 4: High category spending
-  categories.forEach((cat) => {
-    if (cat.percentage > 30) {
-      insights.push({
-        id: `high-category-${cat.id}`,
-        type: 'warning',
-        title: `Высокие расходы: ${cat.name}`,
-        message: `Категория "${cat.name}" занимает ${cat.percentage.toFixed(1)}% бюджета. Рекомендуется не превышать 30% на одну категорию.`,
-        icon: '📊',
-      });
-    }
-  });
+  // Insight 4: High category spending (current month only)
+  if (currentMonthExpenses.length > 0) {
+    const categorySpending: { [key: string]: number } = {};
+    currentMonthExpenses.forEach(exp => {
+      categorySpending[exp.category] = (categorySpending[exp.category] || 0) + exp.amount;
+    });
 
-  // Insight 5: Balanced budget
-  const totalPercentage = categories.reduce((sum, cat) => sum + cat.percentage, 0);
-  if (totalPercentage <= 100 && totalPercentage >= 80 && remaining >= 0) {
-    insights.push({
-      id: 'balanced-budget',
-      type: 'positive',
-      title: 'Сбалансированный бюджет',
-      message: 'Ваш бюджет хорошо распределен по категориям. Продолжайте следить за расходами!',
-      icon: '✅',
+    Object.entries(categorySpending).forEach(([category, amount]) => {
+      const percentage = (amount / salary) * 100;
+      if (percentage > 30) {
+        insights.push({
+          id: `high-category-${category}`,
+          type: 'warning',
+          title: `Высокие расходы: ${category}`,
+          message: `В этом месяце "${category}" занимает ${percentage.toFixed(1)}% бюджета (${amount.toLocaleString('ru-RU')} с).`,
+          icon: '📊',
+        });
+      }
     });
   }
 
-  // Insight 6: No daily expenses
-  if (dailyExpenses.length === 0) {
+  // Insight 5: No daily expenses this month
+  if (currentMonthExpenses.length === 0) {
     insights.push({
       id: 'no-daily-tracking',
       type: 'suggestion',
       title: 'Начните отслеживать расходы',
-      message: 'Добавьте ежедневные расходы для более точного анализа вашего бюджета.',
+      message: 'Добавьте ежедневные расходы для более точного анализа вашего бюджета в этом месяце.',
       icon: '📝',
     });
   }
@@ -108,12 +126,8 @@ export function generateDailyInsights(dailyExpenses: DailyExpense[]): Insight[] 
   const todayExpenses = dailyExpenses.filter(exp => exp.date === today);
   const todayTotal = todayExpenses.reduce((sum, exp) => sum + exp.amount, 0);
 
-  // Calculate average daily spending (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentExpenses = dailyExpenses.filter(
-    exp => new Date(exp.date) >= thirtyDaysAgo
-  );
+  // Use only last 7 days for recent comparison
+  const recentExpenses = getRecentExpenses(dailyExpenses, 7);
 
   if (recentExpenses.length === 0) {
     return insights;
@@ -123,21 +137,21 @@ export function generateDailyInsights(dailyExpenses: DailyExpense[]): Insight[] 
   const daysWithExpenses = new Set(recentExpenses.map(exp => exp.date)).size;
   const averageDaily = daysWithExpenses > 0 ? totalRecent / daysWithExpenses : 0;
 
-  // Insight 1: Today vs average
-  if (todayTotal > averageDaily * 1.5) {
+  // Insight 1: Today vs average (last 7 days)
+  if (todayTotal > averageDaily * 1.5 && averageDaily > 0) {
     insights.push({
       id: 'high-daily-spending',
       type: 'warning',
       title: 'Высокие расходы сегодня',
-      message: `Сегодня вы потратили ${todayTotal.toLocaleString('ru-RU')} ₽, что на ${((todayTotal / averageDaily - 1) * 100).toFixed(0)}% больше среднего (${averageDaily.toLocaleString('ru-RU')} ₽).`,
+      message: `Сегодня вы потратили ${todayTotal.toLocaleString('ru-RU')} с, что на ${((todayTotal / averageDaily - 1) * 100).toFixed(0)}% больше среднего за неделю.`,
       icon: '📈',
     });
-  } else if (todayTotal < averageDaily * 0.5 && todayTotal > 0) {
+  } else if (todayTotal < averageDaily * 0.5 && todayTotal > 0 && averageDaily > 0) {
     insights.push({
       id: 'low-daily-spending',
       type: 'positive',
       title: 'Экономный день!',
-      message: `Сегодня вы потратили ${todayTotal.toLocaleString('ru-RU')} ₽, что ниже среднего. Отличная работа!`,
+      message: `Сегодня вы потратили ${todayTotal.toLocaleString('ru-RU')} с, что ниже среднего за неделю. Отличная работа!`,
       icon: '🌟',
     });
   }
@@ -153,24 +167,27 @@ export function generateDailyInsights(dailyExpenses: DailyExpense[]): Insight[] 
     });
   }
 
-  // Insight 3: Frequent category
+  // Insight 3: Frequent category (last 7 days only)
   const categoryCount: { [key: string]: number } = {};
+  const categoryAmount: { [key: string]: number } = {};
+  
   recentExpenses.forEach(exp => {
     categoryCount[exp.category] = (categoryCount[exp.category] || 0) + 1;
+    categoryAmount[exp.category] = (categoryAmount[exp.category] || 0) + exp.amount;
   });
 
-  const mostFrequent = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0];
-  if (mostFrequent && mostFrequent[1] > recentExpenses.length * 0.3) {
+  const mostExpensive = Object.entries(categoryAmount).sort((a, b) => b[1] - a[1])[0];
+  if (mostExpensive && mostExpensive[1] > totalRecent * 0.4) {
     insights.push({
-      id: 'frequent-category',
+      id: 'expensive-category',
       type: 'suggestion',
-      title: 'Частая категория расходов',
-      message: `Большинство ваших расходов приходится на "${mostFrequent[0]}". Возможно, стоит оптимизировать эту категорию.`,
+      title: 'Высокие расходы на категорию',
+      message: `На этой неделе больше всего вы тратите на "${mostExpensive[0]}" (${mostExpensive[1].toLocaleString('ru-RU')} с).`,
       icon: '🔍',
     });
   }
 
-  // Insight 4: Spending streak
+  // Insight 4: Spending streak (last 7 days)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date();
     date.setDate(date.getDate() - i);
@@ -189,6 +206,24 @@ export function generateDailyInsights(dailyExpenses: DailyExpense[]): Insight[] 
       message: 'Вы тратили деньги каждый день на этой неделе. Попробуйте устроить день без покупок.',
       icon: '📅',
     });
+  }
+
+  // Insight 5: Stable spending
+  if (daysWithSpending >= 3 && daysWithSpending < 7) {
+    const variance = recentExpenses.reduce((sum, exp) => {
+      const diff = exp.amount - averageDaily;
+      return sum + (diff * diff);
+    }, 0) / recentExpenses.length;
+    
+    if (variance < averageDaily * 0.5) {
+      insights.push({
+        id: 'stable-spending',
+        type: 'positive',
+        title: 'Стабильные расходы',
+        message: 'Ваши расходы на этой неделе стабильны. Вы хорошо контролируете бюджет!',
+        icon: '✅',
+      });
+    }
   }
 
   return insights;

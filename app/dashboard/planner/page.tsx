@@ -5,25 +5,28 @@ import { usePremium } from '@/hooks/usePremium';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Sidebar from '../../components/Sidebar';
-import CategoryCard from '../../components/CategoryCard';
-import { Category } from '../../types';
-
-const DEFAULT_CATEGORIES: Category[] = [
-  { id: '1', name: '🏠 Аренда', percentage: 35, amount: 0 },
-  { id: '2', name: '🛒 Продукты', percentage: 15, amount: 0 },
-  { id: '3', name: '⚡ Коммун услуги', percentage: 5, amount: 0 },
-  { id: '4', name: '📞 Связь', percentage: 3, amount: 0 },
-  { id: '5', name: '🚗 Транспорт', percentage: 5, amount: 0 },
-  { id: '6', name: '🧼 Гигиена', percentage: 3, amount: 0 },
-  { id: '7', name: '💊 Лекарства', percentage: 7, amount: 0 },
-];
+import { MonthlyPlan } from '../../types';
+import { collection, addDoc, query, where, getDocs, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firestore';
+import { useToast } from '@/hooks/useToast';
+import Toast from '../../components/Toast';
 
 export default function PlannerPage() {
   const { user, loading } = useAuth();
   const { isPremium, isTrialActive, trialDaysLeft, loading: loadingPremium } = usePremium(user);
   const router = useRouter();
-  const [salary, setSalary] = useState(0);
-  const [categories, setCategories] = useState<Category[]>(DEFAULT_CATEGORIES);
+  const [monthlyPlans, setMonthlyPlans] = useState<MonthlyPlan[]>([]);
+  const [newPlanTitle, setNewPlanTitle] = useState('');
+  const [newPlanAmount, setNewPlanAmount] = useState('');
+  const [newPlanCategory, setNewPlanCategory] = useState('');
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [editingAmount, setEditingAmount] = useState('');
+  const [editingCategory, setEditingCategory] = useState('');
+  const [loadingPlans, setLoadingPlans] = useState(true);
+  const { toasts, showToast, hideToast } = useToast();
+
+  const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
 
   useEffect(() => {
     if (!loading && !user) {
@@ -33,69 +36,162 @@ export default function PlannerPage() {
 
   useEffect(() => {
     if (user) {
-      const savedSalary = localStorage.getItem('salary');
-      const savedCategories = localStorage.getItem('categories');
-      
-      if (savedSalary) setSalary(Number(savedSalary));
-      if (savedCategories) setCategories(JSON.parse(savedCategories));
+      fetchMonthlyPlans();
     }
   }, [user]);
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('salary', salary.toString());
-      localStorage.setItem('categories', JSON.stringify(categories));
+  const fetchMonthlyPlans = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingPlans(true);
+      const plansRef = collection(db, 'monthlyPlans');
+      const q = query(
+        plansRef,
+        where('userId', '==', user.uid),
+        where('month', '==', currentMonth)
+      );
+      const snapshot = await getDocs(q);
+      const fetchedPlans = snapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Migration: Handle old structure (text) and new structure (title + amount)
+        // If plan has old structure, skip it or provide defaults
+        if (!data.amount || data.amount === undefined) {
+          // Old plan structure - skip it
+          return null;
+        }
+        
+        return {
+          id: doc.id,
+          userId: data.userId,
+          title: data.title || data.text || 'Без названия',
+          amount: data.amount || 0,
+          category: data.category,
+          isCompleted: data.isCompleted || false,
+          month: data.month,
+          createdAt: data.createdAt,
+        } as MonthlyPlan;
+      }).filter(plan => plan !== null) as MonthlyPlan[];
+      
+      setMonthlyPlans(fetchedPlans);
+    } catch (error) {
+      console.error('Error fetching monthly plans:', error);
+      showToast('Ошибка загрузки планов', 'error');
+    } finally {
+      setLoadingPlans(false);
     }
-  }, [salary, categories, user]);
-
-  const handleSalaryChange = (newSalary: number) => {
-    setSalary(newSalary);
-    setCategories(cats => 
-      cats.map(cat => ({
-        ...cat,
-        amount: (newSalary * cat.percentage) / 100
-      }))
-    );
   };
 
-  const handlePercentageChange = (id: string, percentage: number) => {
-    setCategories(cats =>
-      cats.map(cat =>
-        cat.id === id
-          ? { ...cat, percentage, amount: (salary * percentage) / 100 }
-          : cat
-      )
-    );
+  const handleAddPlan = async () => {
+    if (!newPlanTitle.trim() || !newPlanAmount || !user) return;
+    
+    const amount = parseFloat(newPlanAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showToast('Введите корректную сумму', 'error');
+      return;
+    }
+    
+    try {
+      const plansRef = collection(db, 'monthlyPlans');
+      const newPlan = {
+        userId: user.uid,
+        title: newPlanTitle.trim(),
+        amount: amount,
+        category: newPlanCategory.trim() || undefined,
+        isCompleted: false,
+        month: currentMonth,
+        createdAt: serverTimestamp(),
+      };
+      
+      const docRef = await addDoc(plansRef, newPlan);
+      setMonthlyPlans([...monthlyPlans, { id: docRef.id, ...newPlan }]);
+      setNewPlanTitle('');
+      setNewPlanAmount('');
+      setNewPlanCategory('');
+      showToast('План добавлен', 'success');
+    } catch (error) {
+      console.error('Error adding plan:', error);
+      showToast('Ошибка при добавлении плана', 'error');
+    }
   };
 
-  const handleAmountChange = (id: string, amount: number) => {
-    setCategories(cats =>
-      cats.map(cat =>
-        cat.id === id
-          ? { ...cat, amount, percentage: salary > 0 ? (amount / salary) * 100 : 0 }
-          : cat
-      )
-    );
+  const handleToggleComplete = async (planId: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'monthlyPlans', planId), {
+        isCompleted: !currentStatus,
+      });
+      
+      setMonthlyPlans(plans =>
+        plans.map(plan =>
+          plan.id === planId ? { ...plan, isCompleted: !currentStatus } : plan
+        )
+      );
+    } catch (error) {
+      console.error('Error toggling plan:', error);
+      showToast('Ошибка при обновлении плана', 'error');
+    }
   };
 
-  const handleNameChange = (id: string, name: string) => {
-    setCategories(cats =>
-      cats.map(cat => (cat.id === id ? { ...cat, name } : cat))
-    );
+  const handleDeletePlan = async (planId: string) => {
+    if (!confirm('Удалить этот план?')) return;
+    
+    try {
+      await deleteDoc(doc(db, 'monthlyPlans', planId));
+      setMonthlyPlans(plans => plans.filter(plan => plan.id !== planId));
+      showToast('План удален', 'success');
+    } catch (error) {
+      console.error('Error deleting plan:', error);
+      showToast('Ошибка при удалении плана', 'error');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setCategories(cats => cats.filter(cat => cat.id !== id));
+  const handleStartEdit = (plan: MonthlyPlan) => {
+    setEditingPlanId(plan.id);
+    setEditingTitle(plan.title);
+    setEditingAmount(plan.amount.toString());
+    setEditingCategory(plan.category || '');
   };
 
-  const handleAddCategory = () => {
-    const newCategory: Category = {
-      id: Date.now().toString(),
-      name: '📝 Новая категория',
-      percentage: 0,
-      amount: 0,
-    };
-    setCategories([...categories, newCategory]);
+  const handleSaveEdit = async (planId: string) => {
+    if (!editingTitle.trim() || !editingAmount) return;
+    
+    const amount = parseFloat(editingAmount);
+    if (isNaN(amount) || amount <= 0) {
+      showToast('Введите корректную сумму', 'error');
+      return;
+    }
+    
+    try {
+      await updateDoc(doc(db, 'monthlyPlans', planId), {
+        title: editingTitle.trim(),
+        amount: amount,
+        category: editingCategory.trim() || undefined,
+      });
+      
+      setMonthlyPlans(plans =>
+        plans.map(plan =>
+          plan.id === planId 
+            ? { ...plan, title: editingTitle.trim(), amount: amount, category: editingCategory.trim() || undefined } 
+            : plan
+        )
+      );
+      setEditingPlanId(null);
+      setEditingTitle('');
+      setEditingAmount('');
+      setEditingCategory('');
+      showToast('План обновлен', 'success');
+    } catch (error) {
+      console.error('Error updating plan:', error);
+      showToast('Ошибка при обновлении плана', 'error');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingPlanId(null);
+    setEditingTitle('');
+    setEditingAmount('');
+    setEditingCategory('');
   };
 
   if (loading || loadingPremium || !user) {
@@ -106,13 +202,18 @@ export default function PlannerPage() {
     );
   }
 
-  const totalSpent = categories.reduce((sum, cat) => sum + cat.amount, 0);
-  const remaining = salary - totalSpent;
-  const totalPercentage = categories.reduce((sum, cat) => sum + cat.percentage, 0);
-  const isOverBudget = totalPercentage > 100;
+  const completedPlans = monthlyPlans.filter(p => p.isCompleted).length;
+  const completionRate = monthlyPlans.length > 0 ? (completedPlans / monthlyPlans.length) * 100 : 0;
+  
+  // Calculate financial summary
+  const totalPlannedAmount = monthlyPlans.reduce((sum, plan) => sum + (plan.amount || 0), 0);
+  const totalCompletedAmount = monthlyPlans
+    .filter(plan => plan.isCompleted)
+    .reduce((sum, plan) => sum + (plan.amount || 0), 0);
+  const remainingAmount = totalPlannedAmount - totalCompletedAmount;
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50 overflow-hidden">
       <Sidebar 
         userEmail={user.email} 
         isPremium={isPremium}
@@ -120,91 +221,237 @@ export default function PlannerPage() {
         trialDaysLeft={trialDaysLeft}
       />
       
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8">
-        <div className="max-w-5xl mx-auto">
+      <main className="flex-1 overflow-y-auto overflow-x-hidden lg:ml-64 pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8 w-full max-w-full">
+        <div className="max-w-5xl mx-auto w-full">
           <h1 className="text-3xl font-bold text-gray-900 mb-8">Планировщик бюджета</h1>
 
-          {/* Salary Input */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
-            <div className="bg-orange-400 px-6 py-3 rounded-t-lg">
-              <h2 className="text-sm font-bold text-gray-800 uppercase">Ваш бюджет</h2>
-            </div>
-            <div className="p-6">
-              <input
-                type="number"
-                value={salary || ''}
-                onChange={(e) => handleSalaryChange(Number(e.target.value))}
-                placeholder="Ваш бюджет"
-                min="0"
-                className="w-full text-center text-4xl font-bold text-gray-900 bg-transparent border-b-4 border-blue-500 focus:outline-none focus:border-blue-600 pb-2"
-              />
-              <div className="text-center text-3xl font-bold text-gray-900 mt-1">с</div>
-            </div>
-          </div>
-
-          {/* Summary */}
+          {/* Monthly Plans Section */}
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 p-6">
-            <div className="grid grid-cols-3 gap-4 mb-4">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Потрачено</p>
-<p className="text-2xl font-bold text-gray-900">{totalSpent.toLocaleString('ru-RU')} с</p>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                Планы на {new Date(currentMonth).toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' })}
+              </h2>
+              {monthlyPlans.length > 0 && (
+                <div className="text-sm text-gray-600">
+                  Выполнено: {completedPlans}/{monthlyPlans.length} ({completionRate.toFixed(0)}%)
+                </div>
+              )}
+            </div>
+
+            {/* Financial Summary */}
+            {monthlyPlans.length > 0 && (
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-4 border border-blue-200">
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Финансовая сводка</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Запланировано</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {totalPlannedAmount.toLocaleString('ru-RU')} с
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Выполнено</p>
+                    <p className="text-lg font-bold text-green-600">
+                      {totalCompletedAmount.toLocaleString('ru-RU')} с
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600 mb-1">Осталось</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {remainingAmount.toLocaleString('ru-RU')} с
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Использовано</p>
-                <p className={`text-2xl font-bold ${isOverBudget ? 'text-red-600' : 'text-green-600'}`}>
-                  {totalPercentage.toFixed(1)}%
-                </p>
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Остаток</p>
-                <p className={`text-2xl font-bold ${remaining < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                  {remaining.toLocaleString('ru-RU')} с
-                </p>
+            )}
+
+            {/* Add Plan Form */}
+            <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Добавить новый план</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                <input
+                  type="text"
+                  value={newPlanTitle}
+                  onChange={(e) => setNewPlanTitle(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && newPlanAmount && handleAddPlan()}
+                  placeholder="Название плана (например: Купить продукты)"
+                  className="sm:col-span-5 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <input
+                  type="number"
+                  value={newPlanAmount}
+                  onChange={(e) => setNewPlanAmount(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && newPlanTitle && handleAddPlan()}
+                  placeholder="Сумма (сом)"
+                  min="0"
+                  step="0.01"
+                  className="sm:col-span-3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <input
+                  type="text"
+                  value={newPlanCategory}
+                  onChange={(e) => setNewPlanCategory(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && newPlanTitle && newPlanAmount && handleAddPlan()}
+                  placeholder="Категория (опционально)"
+                  className="sm:col-span-3 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  onClick={handleAddPlan}
+                  disabled={!newPlanTitle.trim() || !newPlanAmount}
+                  className="sm:col-span-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  +
+                </button>
               </div>
             </div>
 
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                className={`h-full transition-all duration-300 ${
-                  isOverBudget ? 'bg-red-500' : 'bg-green-500'
-                }`}
-                style={{ width: `${Math.min(totalPercentage, 100)}%` }}
-              />
-            </div>
+            {/* Plans List */}
+            {loadingPlans ? (
+              <div className="text-center py-8 text-gray-500">Загрузка планов...</div>
+            ) : monthlyPlans.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Нет планов на этот месяц. Добавьте первый план!
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {monthlyPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={`flex items-center gap-3 p-3 rounded-lg border transition-all ${
+                      plan.isCompleted
+                        ? 'bg-green-50 border-green-200'
+                        : 'bg-white border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => handleToggleComplete(plan.id, plan.isCompleted)}
+                      className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+                        plan.isCompleted
+                          ? 'bg-green-500 border-green-500'
+                          : 'border-gray-300 hover:border-blue-500'
+                      }`}
+                    >
+                      {plan.isCompleted && <span className="text-white text-sm">✓</span>}
+                    </button>
 
-            {isOverBudget && (
-              <p className="text-sm text-red-600 font-medium mt-2 text-center">
-                ⚠️ Бюджет превышает 100%
-              </p>
+                    {/* Plan Content */}
+                    {editingPlanId === plan.id ? (
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-12 gap-2">
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(plan.id)}
+                          className="sm:col-span-5 px-3 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                          autoFocus
+                        />
+                        <input
+                          type="number"
+                          value={editingAmount}
+                          onChange={(e) => setEditingAmount(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(plan.id)}
+                          placeholder="Сумма"
+                          min="0"
+                          step="0.01"
+                          className="sm:col-span-3 px-3 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                        <input
+                          type="text"
+                          value={editingCategory}
+                          onChange={(e) => setEditingCategory(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSaveEdit(plan.id)}
+                          placeholder="Категория"
+                          className="sm:col-span-4 px-3 py-1 border border-blue-500 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <span
+                            className={`block font-medium ${
+                              plan.isCompleted
+                                ? 'line-through text-gray-500'
+                                : 'text-gray-900'
+                            }`}
+                          >
+                            {plan.title || 'Без названия'}
+                          </span>
+                          {plan.category && (
+                            <span className="text-xs text-gray-500">
+                              {plan.category}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex-shrink-0">
+                          <span
+                            className={`text-lg font-bold ${
+                              plan.isCompleted
+                                ? 'text-gray-400 line-through'
+                                : 'text-blue-600'
+                            }`}
+                          >
+                            {(plan.amount || 0).toLocaleString('ru-RU')} с
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {editingPlanId === plan.id ? (
+                        <>
+                          <button
+                            onClick={() => handleSaveEdit(plan.id)}
+                            className="text-green-600 hover:text-green-700 px-2 py-1 text-sm"
+                            title="Сохранить"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="text-gray-600 hover:text-gray-700 px-2 py-1 text-sm"
+                            title="Отмена"
+                          >
+                            ✕
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => handleStartEdit(plan)}
+                            className="text-blue-600 hover:text-blue-700 px-2 py-1 text-sm"
+                            title="Редактировать"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeletePlan(plan.id)}
+                            className="text-red-600 hover:text-red-700 px-2 py-1 text-sm"
+                            title="Удалить"
+                          >
+                            🗑️
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
-
-          {/* Categories */}
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Категории расходов</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {categories.map((category) => (
-                <CategoryCard
-                  key={category.id}
-                  category={category}
-                  onPercentageChange={handlePercentageChange}
-                  onAmountChange={handleAmountChange}
-                  onNameChange={handleNameChange}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Add Category Button */}
-          <button
-            onClick={handleAddCategory}
-            className="w-full py-4 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow-sm hover:shadow-md transition-all"
-          >
-            + Добавить категорию
-          </button>
         </div>
       </main>
+
+      {/* Toast Notifications */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          message={toast.message}
+          type={toast.type}
+          onClose={() => hideToast(toast.id)}
+        />
+      ))}
     </div>
   );
 }

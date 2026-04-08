@@ -112,7 +112,7 @@ export default function DashboardPage() {
           )}
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
             <SummaryCard
               title="Месячный доход"
               value={`${salary.toLocaleString('ru-RU')} с`}
@@ -138,7 +138,7 @@ export default function DashboardPage() {
               icon="📊"
               color={totalPercentage > 100 ? 'red' : 'green'}
             />
-          </div>
+          </div> */}
 
           {/* Insights Section */}
           <div className="mb-6 sm:mb-8">

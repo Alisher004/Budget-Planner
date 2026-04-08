@@ -96,9 +96,6 @@ export default function AnalyticsPage() {
     { month: 'Мар', planned: totalPlanned, daily: totalDailySpent, remaining: remaining },
   ];
 
-  // Check access - single source of truth
-  const hasAccess = isPremium || isTrialActive;
-
   return (
     <PremiumGate isPremium={isPremium} isTrialActive={isTrialActive} trialDaysLeft={trialDaysLeft}>
       <div className="flex h-screen overflow-hidden bg-gray-50">
